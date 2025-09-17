@@ -1,10 +1,11 @@
-import sys
 import os
+import sys
 
-src_aa = os.path.abspath(os.path.join(os.getcwd(), 'src'))
+src_aa = os.path.abspath(os.path.join(os.getcwd(), "src"))
 sys.path.insert(0, src_aa)
 
 import numpy as np
+
 from pyGroupedTransforms.GroupedTransforms import *
 
 rng = np.random.default_rng()
@@ -12,13 +13,13 @@ rng = np.random.default_rng()
 d = 4
 
 M = 1000
-X = rng.random((M,d)) * 0.5 
+X = rng.random((M, d)) * 0.5
 
 U = [(), (1,), (1, 2)]
 
 # set up transform ###################################################
 
-F = GroupedTransform("cos", X, U = U, N = [0, 64, 16])
+F = GroupedTransform("cos", X, U=U, N=[0, 64, 16])
 F_direct = F.get_matrix()
 
 # compute transform with NFFT ########################################
@@ -72,5 +73,3 @@ fhat_direct = np.matmul(np.matrix(F_direct).H, y)
 
 error = np.linalg.norm(fhat.vec() - fhat_direct)
 assert error < 1e-5
-
-

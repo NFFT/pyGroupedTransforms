@@ -1,10 +1,11 @@
-import sys
 import os
+import sys
 
-src_aa = os.path.abspath(os.path.join(os.getcwd(), 'src'))
+src_aa = os.path.abspath(os.path.join(os.getcwd(), "src"))
 sys.path.insert(0, src_aa)
 
 import numpy as np
+
 from pyGroupedTransforms.GroupedTransforms import *
 
 rng = np.random.default_rng()
@@ -12,13 +13,13 @@ rng = np.random.default_rng()
 d = 4
 
 M = 1000
-X = rng.random((M,d)) - 0.5 
+X = rng.random((M, d)) - 0.5
 
 U = [(), (1,), (1, 2)]
 
 # set up transform ###################################################
 
-F = GroupedTransform("exp", X, U = U, N = [0, 64, 16])
+F = GroupedTransform("exp", X, U=U, N=[0, 64, 16])
 F_direct = F.get_matrix()
 
 # compute transform with NFFT ########################################
@@ -26,17 +27,17 @@ F_direct = F.get_matrix()
 fhat = GroupedCoefficients(F.settings)
 for i in range(len(F.settings)):
     u = F.settings[i].u
-    fhat[u] = rng.random(len(fhat[u])) + 1.j * rng.random(len(fhat[u]))
+    fhat[u] = rng.random(len(fhat[u])) + 1.0j * rng.random(len(fhat[u]))
 
 # arithmetic tests ###################################################
 
 ghat = GroupedCoefficients(F.settings)
 for i in range(len(F.settings)):
     u = F.settings[i].u
-    ghat[u] = rng.random(len(ghat[u])) + 1.j * rng.random(len(ghat[u]))
+    ghat[u] = rng.random(len(ghat[u])) + 1.0j * rng.random(len(ghat[u]))
 
 fhat[1]
-fhat[1] = 1.0 + 1.j
+fhat[1] = 1.0 + 1.0j
 2 * fhat
 fhat + ghat
 fhat - ghat
@@ -58,7 +59,7 @@ assert error < 1e-5
 
 # generate random function values ####################################
 
-y = rng.random(M) + 1.j * rng.random(M)
+y = rng.random(M) + 1.0j * rng.random(M)
 
 # compute adjoint transform with NFFT ################################
 
@@ -72,5 +73,3 @@ fhat_direct = np.matmul(np.matrix(F_direct).H, y)
 
 error = np.linalg.norm(fhat.vec() - fhat_direct)
 assert error < 1e-5
-
-

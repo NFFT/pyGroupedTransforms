@@ -1,12 +1,19 @@
 from scipy.sparse.linalg import LinearOperator
 
+
 class DeferredLinearOperator(LinearOperator):
 
-    def __init__(self, dtype = 'complex', shape = None, mfunc = lambda x: "not yet initialized", rmfunc = lambda x: "not yet initialized"):
+    def __init__(
+        self,
+        dtype="complex",
+        shape=None,
+        mfunc=lambda x: "not yet initialized",
+        rmfunc=lambda x: "not yet initialized",
+    ):
 
         self.sh = False
         if shape == None:
-            shape = (0,0)
+            shape = (0, 0)
         else:
             self.sh = True
 
@@ -14,9 +21,9 @@ class DeferredLinearOperator(LinearOperator):
         self._rmatvec_func = rmfunc
         self._matvec = lambda x: self._matvec_func(x)
         self._rmatvec = lambda x: self._rmatvec_func(x)
-        super().__init__(dtype=dtype, shape=shape) 
+        super().__init__(dtype=dtype, shape=shape)
 
-    def set(self, dtype = None, shape = None, mfunc = None, rmfunc = None):
+    def set(self, dtype=None, shape=None, mfunc=None, rmfunc=None):
         if dtype != None:
             self.dtype = dtype
 
@@ -34,7 +41,7 @@ class DeferredLinearOperator(LinearOperator):
         if self._matvec_func(0) == "not implemented yet" or self.sh == False:
             raise NotImplementedError("LinearOperator is not yet initialized.")
 
-        print(self.LO@x)
+        print(self.LO @ x)
         return self @ x
 
     def _rmatvec(self, x):
@@ -44,4 +51,3 @@ class DeferredLinearOperator(LinearOperator):
             raise NotImplementedError("rmatvec is not yet implemented")
 
         return self.H @ x
-
