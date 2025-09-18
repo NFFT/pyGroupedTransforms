@@ -1,8 +1,12 @@
-name: Publish Python distribution to TestPyPI
+name: Publish Python release
+
 on:
-    push:
-      paths:
-        - 'pyproject.toml'
+  push:
+    tags:
+      - 'v*.*.*' # Only run for version tags
+    paths:
+      - 'pyproject.toml'  # Ensure the project details have been changed
+
 jobs:
   build:
     name: Build distribution
@@ -26,21 +30,23 @@ jobs:
       with:
         name: python-package-distributions
         path: dist/
+
   github-release:
     name: >-
-      Sign the Python distribution with Sigstore
-      and upload them to GitHub Release
+      Sign distribution and upload to GitHub
+    needs:
+    - build
     runs-on: ubuntu-latest
     permissions:
       contents: write
       id-token: write
     steps:
-    - name: Download all the dists
+    - name: Download the dists
       uses: actions/download-artifact@v4
       with:
         name: python-package-distributions
         path: dist/
-    - name: Sign the dists with Sigstore
+    - name: Sign the dists
       uses: sigstore/gh-action-sigstore-python@v3.0.1
       with:
         inputs: >-
@@ -61,23 +67,22 @@ jobs:
         gh release upload
         '${{ github.ref_name }}' dist/**
         --repo '${{ github.repository }}'
-  publish-to-testpypi:
-    name: Publish Python distribution to TestPyPI
+
+  publish-to-pypi:
+    name: Publish Python distribution to PyPI
     needs:
     - build
     runs-on: ubuntu-latest
     environment:
-      name: testpypi
-      url: https://test.pypi.org/p/pyNFFT3
+      name: pypi
+      url: https://pypi.org/p/pyNFFT3
     permissions:
       id-token: write
     steps:
-    - name: Download all the dists
+    - name: Download the dists
       uses: actions/download-artifact@v4
       with:
         name: python-package-distributions
         path: dist/
-    - name: Publish distribution to TestPyPI
+    - name: Publish distribution to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        repository-url: https://test.pypi.org/legacy/
