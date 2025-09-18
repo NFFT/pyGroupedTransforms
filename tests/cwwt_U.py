@@ -1,10 +1,11 @@
-import sys
 import os
+import sys
 
-src_aa = os.path.abspath(os.path.join(os.getcwd(), 'src'))
+src_aa = os.path.abspath(os.path.join(os.getcwd(), "src"))
 sys.path.insert(0, src_aa)
 
 import numpy as np
+
 from pyGroupedTransforms.GroupedTransforms import *
 
 rng = np.random.default_rng()
@@ -12,13 +13,13 @@ rng = np.random.default_rng()
 d = 4
 
 M = 1000
-X = rng.random((M,d)) - 0.5 
+X = rng.random((M, d)) - 0.5
 
 U = [(), (1,), (1, 2)]
 
 # set up transform ###################################################
 
-F = GroupedTransform("chui2", X, U = U, N = [3, 2, 1])
+F = GroupedTransform("chui2", X, U=U, N=[3, 2, 1])
 
 # compute transform with NFFT ########################################
 
@@ -51,6 +52,3 @@ f = F * fhat
 y = rng.random(M)
 
 fhat = F.adjoint() * y
-
-
-
