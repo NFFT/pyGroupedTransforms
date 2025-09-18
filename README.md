@@ -13,7 +13,7 @@ nonequispaced fast transformation with cosine functions for grouped index sets b
 The [pyGroupedTransforms package](https://pypi.org/project/pyGroupedTransforms/) can be installed via pip:
 
 ```
-pip install -i https://test.pypi.org/simple/ pyGroupedTransforms
+pip install pyGroupedTransforms
 ```
 
 Read the [documentation](https://nfft.github.io/pyGroupedTransforms/) for specific usage information.
