@@ -194,7 +194,7 @@ class GC:  # Superclass of GroupedCoefficientsComplex and GroupedCoefficientsRea
                                             scipy.linalg.circulant(variances(j[dd], m)),
                                         )
 
-                                n[i] += a.T @ Psi @ a
+                                n[i] += a @ Psi.T @ a.T
                                 ac_in = ac_in + 2 ** np.sum(j)
                         return np.sqrt(n)
                     else:
@@ -223,7 +223,7 @@ class GC:  # Superclass of GroupedCoefficientsComplex and GroupedCoefficientsRea
                                             scipy.linalg.circulant(variances(j[dd], m)),
                                         )
 
-                                n[i] += a.T @ Psi @ a
+                                n[i] += a @ Psi.T @ a.T
                                 ac_in = ac_in + 2 ** np.sum(j)
 
                             if len(self.settings[i].u) != 0:
