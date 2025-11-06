@@ -378,6 +378,10 @@ class GroupedTransform:
                 return sum(results)
             else:
                 return self.matrix @ other.data
+        else:
+            raise ValueError(
+                "Wrong input data type"
+            )
 
     def __matmul__(self, other):
         return self.__mul__(other)

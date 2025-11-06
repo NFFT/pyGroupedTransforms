@@ -366,7 +366,7 @@ def get_transform(
             J = np.concatenate((J, J_new))
             V = np.concatenate((V, V_new))
 
-            ac_co = ac_co + np.sum(2**j)
+            ac_co = ac_co + np.prod(2**j)
 
         A = coo_matrix((V, (I.astype(int), J.astype(int))), (M, int(max(J) + 1)))
         A = A.tocsc()
