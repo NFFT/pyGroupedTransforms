@@ -1,4 +1,5 @@
 import numpy as np
+import scipy
 
 from pyGroupedTransforms import CWWTtools, NFCTtools, NFFTtools, NFMTtools
 
@@ -185,11 +186,11 @@ class GC:  # Superclass of GroupedCoefficientsComplex and GroupedCoefficientsRea
                             for jj in range(freq.shape[1]):
                                 j = freq[:, jj]
                                 a = self[s.u][ac_in - 1 : ac_in + 2 ** np.sum(j) - 1]
-                                Psi = circulant(variances(j[0], m))
+                                Psi = scipy.linalg.circulant(variances(j[0], m))
                                 if d > 1:
                                     for dd in range(1, d):
                                         Psi = np.kron(
-                                            Psi, circulant(variances(j[dd], m))
+                                            Psi, scipy.linalg.circulant(variances(j[dd], m))
                                         )
 
                                 n[i] += a @ Psi @ a
@@ -213,11 +214,11 @@ class GC:  # Superclass of GroupedCoefficientsComplex and GroupedCoefficientsRea
                             for jj in range(freq.shape[1]):
                                 j = freq[:, jj]
                                 a = self[s.u][ac_in - 1 : ac_in + 2 ** np.sum(j) - 1]
-                                Psi = circulant(variances(j[0], m))
+                                Psi = scipy.linalg.circulant(variances(j[0], m))
                                 if d > 1:
                                     for dd in range(1, d):
                                         Psi = np.kron(
-                                            Psi, circulant(variances(j[dd], m))
+                                            Psi, scipy.linalg.circulant(variances(j[dd], m))
                                         )
 
                                 n[i] += a @ Psi @ a
