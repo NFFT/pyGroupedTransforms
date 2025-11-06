@@ -190,7 +190,8 @@ class GC:  # Superclass of GroupedCoefficientsComplex and GroupedCoefficientsRea
                                 if d > 1:
                                     for dd in range(1, d):
                                         Psi = np.kron(
-                                            Psi, scipy.linalg.circulant(variances(j[dd], m))
+                                            Psi,
+                                            scipy.linalg.circulant(variances(j[dd], m)),
                                         )
 
                                 n[i] += a @ Psi @ a
@@ -218,7 +219,8 @@ class GC:  # Superclass of GroupedCoefficientsComplex and GroupedCoefficientsRea
                                 if d > 1:
                                     for dd in range(1, d):
                                         Psi = np.kron(
-                                            Psi, scipy.linalg.circulant(variances(j[dd], m))
+                                            Psi,
+                                            scipy.linalg.circulant(variances(j[dd], m)),
                                         )
 
                                 n[i] += a @ Psi @ a
