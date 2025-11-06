@@ -184,6 +184,7 @@ class GroupedTransform:
         X,
         settings=[],
         fastmult=True,
+        parallel=True,
         basis_vect=[],
         N=[],
         U=None,
@@ -232,6 +233,7 @@ class GroupedTransform:
         self.basis_vect = basis_vect
         self.system = system
         self.X = X
+        self.parallel = parallel
 
         if len(settings) == 0:
             self.settings = get_setting(system=system, N=N, U=U, d=d, ds=ds)
@@ -322,20 +324,25 @@ class GroupedTransform:
 
         if isinstance(other, np.ndarray):  # `f = F*f`    (f = other)
             if self.fastmult:
-                threads = []
                 fhat = GroupedCoefficients(self.settings)
 
                 def adjoint_worker(i):
                     adjoint_result = self.transforms[i].H @ other
                     fhat[self.settings[i].u] = adjoint_result
+                    
+                if self.parallel:
+                    threads = []
+                    for i in range(len(self.transforms)):
+                        t = threading.Thread(target=adjoint_worker, args=(i,))
+                        t.start()
+                        threads.append(t)
 
-                for i in range(len(self.transforms)):
-                    t = threading.Thread(target=adjoint_worker, args=(i,))
-                    t.start()
-                    threads.append(t)
-
-                for t in threads:
-                    t.join()
+                    for t in threads:
+                        t.join()
+                        
+                else:
+                    for i in range(len(self.transforms)):
+                        adjoint_worker(i)
 
                 return fhat
             else:
@@ -349,7 +356,6 @@ class GroupedTransform:
                 )
 
             if self.fastmult:
-                threads = []
                 results = []
 
                 def worker(i):
@@ -357,12 +363,17 @@ class GroupedTransform:
                     result = self.transforms[i] @ other[u]
                     results.append(result)
 
-                for i in range(len(self.transforms)):
-                    t = threading.Thread(target=worker, args=(i,))
-                    t.start()
-                    threads.append(t)
-                for t in threads:
-                    t.join()
+                if self.parallel:
+                    threads = []
+                    for i in range(len(self.transforms)):
+                        t = threading.Thread(target=worker, args=(i,))
+                        t.start()
+                        threads.append(t)
+                    for t in threads:
+                        t.join()
+                else:
+                    for i in range(len(self.transforms)):
+                        worker(i)
 
                 return sum(results)
             else:
