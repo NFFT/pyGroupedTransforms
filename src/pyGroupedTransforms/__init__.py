@@ -35,7 +35,7 @@ __all__ = [
     "Setting",
     "GroupedCoefficientsComplex",
     "GroupedCoefficientsReal",
-    "get_superposition_set", #TODO: Exports ab hier testen
+    "get_superposition_set",  # TODO: Exports ab hier testen
     "GroupedTransform",
     "GroupedCoefficients",
 ]

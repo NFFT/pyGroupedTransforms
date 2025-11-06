@@ -329,7 +329,7 @@ class GroupedTransform:
                 def adjoint_worker(i):
                     adjoint_result = self.transforms[i].H @ other
                     fhat[self.settings[i].u] = adjoint_result
-                    
+
                 if self.parallel:
                     threads = []
                     for i in range(len(self.transforms)):
@@ -339,7 +339,7 @@ class GroupedTransform:
 
                     for t in threads:
                         t.join()
-                        
+
                 else:
                     for i in range(len(self.transforms)):
                         adjoint_worker(i)
