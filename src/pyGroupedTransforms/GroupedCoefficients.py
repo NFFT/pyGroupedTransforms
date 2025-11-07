@@ -180,8 +180,8 @@ class GC:  # Superclass of GroupedCoefficientsComplex and GroupedCoefficientsRea
                             d = len(self.settings[i].u)
                             ac_in = 1
                             freq = CWWTtools.cwwt_index_set(self.settings[i].bandwidths)
-                            if d == 1:
-                                freq = freq.T
+#                            if d == 1:                    TODO: Why????
+#                                freq = freq.T
 
                             for jj in range(freq.shape[1]):
                                 j = freq[:, jj]
