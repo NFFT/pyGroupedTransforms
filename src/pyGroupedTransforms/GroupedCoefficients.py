@@ -188,10 +188,10 @@ class GC:  # Superclass of GroupedCoefficientsComplex and GroupedCoefficientsRea
                                 a = self[s.u][ac_in - 1 : ac_in + 2 ** np.sum(j) - 1]
                                 Psi = scipy.linalg.circulant(variances(j[0], m))
                                 if d > 1:
-                                    for dd in range(1, d):
+                                    for kd in range(1, d):
                                         Psi = np.kron(
                                             Psi,
-                                            scipy.linalg.circulant(variances(j[dd], m)),
+                                            scipy.linalg.circulant(variances(j[kd], m)),
                                         )
 
                                 n[i] += a @ Psi.T @ a.T
@@ -217,10 +217,10 @@ class GC:  # Superclass of GroupedCoefficientsComplex and GroupedCoefficientsRea
                                 a = self[s.u][ac_in - 1 : ac_in + 2 ** np.sum(j) - 1]
                                 Psi = scipy.linalg.circulant(variances(j[0], m))
                                 if d > 1:
-                                    for dd in range(1, d):
+                                    for kd in range(1, d):
                                         Psi = np.kron(
                                             Psi,
-                                            scipy.linalg.circulant(variances(j[dd], m)),
+                                            scipy.linalg.circulant(variances(j[kd], m)),
                                         )
 
                                 n[i] += a @ Psi.T @ a.T
