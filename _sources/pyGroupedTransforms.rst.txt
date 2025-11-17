@@ -1,0 +1,85 @@
+pyGroupedTransforms package
+===========================
+
+Submodules
+----------
+
+pyGroupedTransforms.CWWTtools module
+------------------------------------
+
+.. automodule:: pyGroupedTransforms.CWWTtools
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+pyGroupedTransforms.DeferredLinearOperator module
+-------------------------------------------------
+
+.. automodule:: pyGroupedTransforms.DeferredLinearOperator
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+pyGroupedTransforms.GroupedCoefficients module
+----------------------------------------------
+
+.. automodule:: pyGroupedTransforms.GroupedCoefficients
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+pyGroupedTransforms.GroupedTransform module
+-------------------------------------------
+
+.. automodule:: pyGroupedTransforms.GroupedTransform
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+pyGroupedTransforms.GroupedTransforms module
+--------------------------------------------
+
+.. automodule:: pyGroupedTransforms.GroupedTransforms
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+pyGroupedTransforms.NFCTtools module
+------------------------------------
+
+.. automodule:: pyGroupedTransforms.NFCTtools
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+pyGroupedTransforms.NFFTtools module
+------------------------------------
+
+.. automodule:: pyGroupedTransforms.NFFTtools
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+pyGroupedTransforms.NFMTtools module
+------------------------------------
+
+.. automodule:: pyGroupedTransforms.NFMTtools
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+pyGroupedTransforms.cardinal\_bspline module
+--------------------------------------------
+
+.. automodule:: pyGroupedTransforms.cardinal_bspline
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: pyGroupedTransforms
+   :members:
+   :show-inheritance:
+   :undoc-members:
