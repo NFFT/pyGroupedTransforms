@@ -20,7 +20,6 @@ from .GroupedTransform import *
 from .GroupedTransforms import *
 
 # export
-
 __all__ = [
     "NFFTtools",
     "NFCTtools",
@@ -35,7 +34,7 @@ __all__ = [
     "Setting",
     "GroupedCoefficientsComplex",
     "GroupedCoefficientsReal",
-    "get_superposition_set",  # TODO: Exports ab hier testen
+    "get_superposition_set",
     "GroupedTransform",
     "GroupedCoefficients",
 ]
