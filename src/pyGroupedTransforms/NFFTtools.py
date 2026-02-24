@@ -88,7 +88,7 @@ def nfft_index_set(
             list(range(int(-bandwidths[0] / 2), int(bandwidths[0] / 2))), dtype="int"
         )
 
-    tmp = [list(range(int(-bw / 2), int(bw / 2))) for bw in bandwidths]
+    tmp = [list(range(int(-bw / 2), int(bw / 2))) for bw in bandwidths[::-1]]
     tmp = itertools.product(*(tmp[::-1]))
 
     freq = np.empty((d, np.prod(bandwidths)), dtype=int)
@@ -134,11 +134,10 @@ def get_transform(
     # Output:
      * `F::LinearMap{ComplexF64}` ... Linear map of the Fourier-transform implemented by the NFFT
     """
-
     if bandwidths.ndim > 1 or bandwidths.dtype != "int32":
         return "Please use an zero or one-dimensional numpy.array with dtype 'int32' as input"
 
-    (M, d) = np.shape(X)
+    M, d = np.shape(X)
 
     if len(bandwidths) == 0:
         return DeferredLinearOperator(
