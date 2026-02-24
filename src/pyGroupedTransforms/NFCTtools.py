@@ -126,7 +126,7 @@ def get_transform(
     if bandwidths.ndim > 1 or bandwidths.dtype != "int32":
         return "Please use an zero or one-dimensional numpy.array with dtype 'int32' as input"
 
-    (M, d) = X.shape
+    M, d = X.shape
 
     if len(bandwidths) == 0:
         return DeferredLinearOperator(
