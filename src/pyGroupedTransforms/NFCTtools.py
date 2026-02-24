@@ -77,8 +77,7 @@ def nfct_index_set(
     if d == 1:
         return np.array([i for i in range(0, bandwidths[0])], "int")
 
-    bandwidths = bandwidths[::-1]
-    tmp = tuple([list(range(0, bw)) for bw in bandwidths])
+    tmp = tuple([list(range(0, bw)) for bw in bandwidths[::-1]])
     tmp = itertools.product(*(tmp[::-1]))
 
     freq = np.empty((d, np.prod(bandwidths)), dtype=int)
