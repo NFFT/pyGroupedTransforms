@@ -24,9 +24,7 @@ U = [(), (1,), (1, 2)]
 
 # set up transform ###################################################
 
-F = GroupedTransform(
-    "mixed", X, U=U, N=[0, 64, 16], basis_vect=basis_vect
-)
+F = GroupedTransform("mixed", X, U=U, N=[0, 64, 16], basis_vect=basis_vect)
 F_direct = F.get_matrix()
 
 # compute transform with NFMT ########################################

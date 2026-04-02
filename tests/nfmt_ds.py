@@ -22,9 +22,7 @@ X[:, 0] -= 0.5
 
 # set up transform ###################################################
 
-F = GroupedTransform(
-    "mixed", X, d=d, ds=ds, N=[64, 16, 4], basis_vect=basis_vect
-)
+F = GroupedTransform("mixed", X, d=d, ds=ds, N=[64, 16, 4], basis_vect=basis_vect)
 F_direct = F.get_matrix()
 
 # compute transform with NFMT ########################################

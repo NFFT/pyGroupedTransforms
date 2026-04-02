@@ -435,7 +435,9 @@ class GroupedTransform:
                 u1 = (0,)
             else:
                 u1 = s1.u
-            F_direct = s1.mode.get_matrix(s1.bandwidths, self.X[:, u1].T, bases=s1.bases)
+            F_direct = s1.mode.get_matrix(
+                s1.bandwidths, self.X[:, u1].T, bases=s1.bases
+            )
             for idx, s in enumerate(self.settings):
                 if idx == 0:
                     continue
