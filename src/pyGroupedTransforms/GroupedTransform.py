@@ -35,9 +35,7 @@ def get_superposition_set(d, ds):
     return [tuple(item) for item in returnset]
 
 
-def get_setting(
-    system, N, U=None, d=None, ds=None
-):  # I have to add bases and NFMT stuff here!
+def get_setting(system, N, U=None, d=None, ds=None, basis_vect=None):
 
     if system not in systems:
         raise ValueError("System not found.")
@@ -52,18 +50,18 @@ def get_setting(
         bwl = [np.full(len(u), tmp[len(u)], "int32") for u in U]
 
         if systems[system] == NFMTtools:
-            if len(basis_vect) == 0:
-                ValueError(
+            if basis_vect is None or len(basis_vect) == 0:
+                raise ValueError(
                     "please call get_setting with basis_vect for a NFMT transform."
                 )
             if len(basis_vect) < d:
-                ValueError("basis_vect must have an entry for every dimension.")
+                raise ValueError("basis_vect must have an entry for every dimension.")
             return [
                 Setting(
                     u=U[idx],
                     mode=systems[system],
                     bandwidths=np.array(bwl[idx], "int32"),
-                    bases=basis_vect[U[idk]],
+                    bases=[basis_vect[j] for j in U[idx]],
                 )
                 for idx in range(len(U))
             ]
@@ -92,18 +90,18 @@ def get_setting(
                 bwl[i] = np.full(len(u), N[i])
 
         if systems[system] == NFMTtools:
-            if len(basis_vect) == 0:
-                ValueError(
+            if basis_vect is None or len(basis_vect) == 0:
+                raise ValueError(
                     "please call get_setting with basis_vect for a NFMT transform."
                 )
-            if len(basis_vect) < max(max(u) for u in U):
-                ValueError("basis_vect must have an entry for every dimension.")
+            if len(basis_vect) <= max(max(u) for u in U if len(u) > 0):
+                raise ValueError("basis_vect must have an entry for every dimension.")
             return [
                 Setting(
                     u=u,
                     mode=systems[system],
                     bandwidths=np.array(bwl[i], "int32"),
-                    bases=basis_vect[u],
+                    bases=[basis_vect[j] for j in u],
                 )
                 for i, u in enumerate(U)
             ]
@@ -131,18 +129,18 @@ def get_setting(
                 bwl[i] = N[i]
 
         if systems[system] == NFMTtools:
-            if len(basis_vect) == 0:
-                ValueError(
+            if basis_vect is None or len(basis_vect) == 0:
+                raise ValueError(
                     "please call get_setting with basis_vect for a NFMT transform."
                 )
-            if len(basis_vect) < max(max(u) for u in U):
-                ValueError("basis_vect must have an entry for every dimension.")
+            if len(basis_vect) <= max(max(u) for u in U if len(u) > 0):
+                raise ValueError("basis_vect must have an entry for every dimension.")
             return [
                 Setting(
                     u=U[idx],
                     mode=systems[system],
                     bandwidths=np.array(bwl[idx], "int32"),
-                    bases=basis_vect[U[idk]],
+                    bases=[basis_vect[j] for j in U[idx]],
                 )
                 for idx in range(len(U))
             ]
@@ -197,11 +195,11 @@ class GroupedTransform:
 
         if system == "mixed":
             if len(basis_vect) == 0:
-                ValueError(
+                raise ValueError(
                     "please call GroupedTransform with basis_vect for a NFMT transform."
                 )
             if len(basis_vect) != X.shape[1]:
-                ValueError("basis_vect must have an entry for every dimension.")
+                raise ValueError("basis_vect must have an entry for every dimension.")
 
         if system in {"exp", "chui1", "chui2", "chui3", "chui4"}:
             if np.min(X) < -0.5 or np.max(X) >= 0.5:
@@ -214,14 +212,14 @@ class GroupedTransform:
 
             cosine_mask = basis_vals > 0
             if np.sum(cosine_mask) > 0:
-                if (np.min(X[cosine_mask, :]) < 0) or (np.max(X[cosine_mask, :]) > 1):
+                if (np.min(X[:, cosine_mask]) < 0) or (np.max(X[:, cosine_mask]) > 1):
                     raise ValueError(
                         "Nodes must be between 0 and 1 for cosine or Chebyshev dimensions."
                     )
 
             exp_mask = ~cosine_mask
             if np.sum(exp_mask) > 0:
-                if (np.min(X[exp_mask, :]) < -0.5) or (np.max(X[exp_mask, :]) > 0.5):
+                if (np.min(X[:, exp_mask]) < -0.5) or (np.max(X[:, exp_mask]) > 0.5):
                     raise ValueError(
                         "Nodes must be between -0.5 and 0.5 for exponentional dimensions."
                     )
@@ -236,7 +234,9 @@ class GroupedTransform:
         self.parallel = parallel
 
         if len(settings) == 0:
-            self.settings = get_setting(system=system, N=N, U=U, d=d, ds=ds)
+            self.settings = get_setting(
+                system=system, N=N, U=U, d=d, ds=ds, basis_vect=basis_vect
+            )
         else:
             self.settings = settings
 
@@ -278,8 +278,9 @@ class GroupedTransform:
                 )
             elif system == "mixed":
                 matrix = np.array(
-                    s1.mode.get_matrix(bandwidths=s1.bandwidths, X=X[:, u1].T),
-                    bases=s1.bases,
+                    s1.mode.get_matrix(
+                        bandwidths=s1.bandwidths, X=X[:, u1].T, bases=s1.bases
+                    )
                 )
                 for s in self.settings[1:]:
                     if len(s.bandwidths) == 0:
@@ -290,8 +291,9 @@ class GroupedTransform:
                         [
                             matrix,
                             np.array(
-                                s.mode.get_matrix(s.bandwidths, X[:, u].T),
-                                bases=s.bases,
+                                s.mode.get_matrix(
+                                    s.bandwidths, X[:, u].T, bases=s.bases
+                                )
                             ),
                         ]
                     )
@@ -433,7 +435,7 @@ class GroupedTransform:
                 u1 = (0,)
             else:
                 u1 = s1.u
-            F_direct = s1.mode.get_matrix(s.bdanwidths, self.X[:, u1].T, bases=s.bases)
+            F_direct = s1.mode.get_matrix(s1.bandwidths, self.X[:, u1].T, bases=s1.bases)
             for idx, s in enumerate(self.settings):
                 if idx == 0:
                     continue
@@ -443,6 +445,7 @@ class GroupedTransform:
                     u = s.u
                 mat = s.mode.get_matrix(s.bandwidths, self.X[:, u].T, s.bases)
                 F_direct = np.hstack([F_direct, mat])
+            return F_direct
         else:
             s1 = self.settings[0]
             if len(s1.bandwidths) == 0:

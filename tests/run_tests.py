@@ -10,6 +10,8 @@ def run_tests():
         "tests/nfft_ds.py",
         "tests/nfct_U.py",
         "tests/nfct_ds.py",
+        "tests/nfmt_U.py",
+        "tests/nfmt_ds.py",
         "tests/cwwt_U.py",
         "tests/cwwt_ds.py",
     ]
