@@ -25,3 +25,4 @@ Requirements
 - pyNFFT3 0.2.2 or greater
 - NumPy 2.0.0 or greater
 - SciPy 1.16.0 or greater
+ 
