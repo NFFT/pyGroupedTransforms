@@ -183,7 +183,7 @@ class GroupedTransform:
         system,
         X,
         settings=[],
-        fastmult=True,
+        algorithm="nfft",
         parallel=True,
         basis_vect=[],
         N=[],
@@ -227,9 +227,9 @@ class GroupedTransform:
                     )
 
         if system in {"chui1", "chui2", "chui3", "chui4"}:
-            fastmult = True
+            algorithm = "nfft"
 
-        self.fastmult = fastmult
+        self.algorithm = algorithm
         self.basis_vect = basis_vect
         self.system = system
         self.X = X
@@ -240,7 +240,7 @@ class GroupedTransform:
         else:
             self.settings = settings
 
-        if fastmult:
+        if algorithm == "nfft":
             self.matrix = np.empty((0, 0), dtype=object)
             self.transforms = [
                 DeferredLinearOperator() for i in range(len(self.settings))
@@ -264,6 +264,25 @@ class GroupedTransform:
                 else:
                     self.transforms[idx] = s.mode.get_transform(
                         bandwidths=s.bandwidths, X=np.copy(X[:, u], order="C")
+                    )
+        elif algorithm == "keops":
+                self.matrix = np.empty((0,0), dtype=object)
+
+                self.transforms = [
+                    DeferredLinearOperator()
+                    for _ in range(len(self.settings))
+                ]
+
+                for idx, s in enumerate(self.settings):
+
+                    if len(s.bandwidths) == 0:
+                        u = (0,)
+                    else:
+                        u = s.u
+
+                    self.transforms[idx] = s.mode.get_transform_keops(
+                        bandwidths=s.bandwidths,
+                        X=np.copy(X[:,u], order="C")
                     )
         else:
             self.transforms = []
@@ -321,9 +340,8 @@ class GroupedTransform:
         If other (= f) is an numpy.ndarray, this function
         overloads the * notation in order to achieve the adjoint transform `f = F*f`.
         """
-
         if isinstance(other, np.ndarray):  # `f = F*f`    (f = other)
-            if self.fastmult:
+            if self.algorithm == "nfft":
                 fhat = GroupedCoefficients(self.settings)
 
                 def adjoint_worker(i):
@@ -345,17 +363,26 @@ class GroupedTransform:
                         adjoint_worker(i)
 
                 return fhat
-            else:
+            elif self.algorithm == "keops":
+                fhat = GroupedCoefficients(self.settings)       
+                
+                for i in range(len(self.transforms)):
+                    adjoint_result = self.transforms[i].H @ other
+                    fhat[self.settings[i].u] = adjoint_result
+
+                return fhat
+            elif self.algorithm == "direct":
                 return GroupedCoefficients(
                     self.settings, (self.matrix.conj()).T @ other
                 )
+                
         elif isinstance(other, GC):  # `f = F*fhat`    (fhat = other)
             if self.settings != other.settings:
                 raise ValueError(
                     "The GroupedTransform and the GroupedCoefficients have different settings"
                 )
 
-            if self.fastmult:
+            if self.algorithm == "nfft":
                 results = []
 
                 def worker(i):
@@ -376,7 +403,16 @@ class GroupedTransform:
                         worker(i)
 
                 return sum(results)
-            else:
+            elif self.algorithm == "keops":
+                results = []
+        
+                for i in range(len(self.transforms)):
+                    u = self.settings[i].u
+                    result = self.transforms[i] @ other[u]
+                    results.append(result)
+
+                return sum(results)
+            elif self.algorithm == "direct":
                 return self.matrix @ other.data
         else:
             raise ValueError("Wrong input data type")
@@ -412,7 +448,7 @@ class GroupedTransform:
 
         if idx is None:
             raise ValueError("This term is not contained")
-        elif self.fastmult:
+        elif self.algorithm == "nfft":
             return self.transforms[idx]
         else:
             return self.get_matrix()

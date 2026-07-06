@@ -2,6 +2,10 @@ import numpy as np
 
 from pyGroupedTransforms import *
 
+import torch
+import pykeops
+from pykeops.torch import LazyTensor
+
 
 def datalength(
     bandwidths: np.ndarray,
@@ -167,6 +171,80 @@ def get_transform(
 
     return DeferredLinearOperator(
         dtype=np.complex128, shape=(M, N), mfunc=trafo, rmfunc=adjoint
+    )
+    
+def get_transform_keops(
+    bandwidths: np.array, X: np.array
+):
+    if bandwidths.ndim > 1 or bandwidths.dtype != "int32":
+        return "Please use an zero or one-dimensional numpy.array with dtype 'int32' as input"
+
+    M, d = np.shape(X)
+
+    if len(bandwidths) == 0:
+        return DeferredLinearOperator(
+            dtype=np.complex128,
+            shape=(M, 1),
+            mfunc=lambda fhat: np.full(M, fhat[0]),
+            rmfunc=lambda f: np.array([np.sum(f)]),
+        )
+
+    X_torch = torch.tensor(X, dtype=torch.float64, device="cuda")
+    freq = index_set_without_zeros(
+        np.array(bandwidths, dtype=np.int32)
+    ).T
+    
+    I_torch = torch.tensor(
+        freq,
+        dtype=torch.float64,
+        device="cuda"
+    )
+
+ 
+    def trafo(fhat): 
+        X_i = LazyTensor(X_torch[:, None, :].contiguous())
+        K_j = LazyTensor(I_torch[None, :, :].contiguous())
+        phase_fwd = (X_i * K_j).sum(-1)
+        two_pi_phase = -2 * torch.pi * phase_fwd
+        kernel_fwd = two_pi_phase.cos() + 1j * two_pi_phase.sin()
+        fhat_torch = torch.tensor(fhat, dtype=torch.complex128, device="cuda")
+        fhat_j = LazyTensor(fhat_torch[None, :, None].contiguous())
+
+        try:
+            result = (kernel_fwd * fhat_j).sum(dim=1)
+            torch.cuda.synchronize()
+            result = result.squeeze().cpu().numpy()
+            return result
+        except Exception as e:
+            print("Error in KeOps trafo:", e)
+            return None
+        
+    def adjoint(f):
+        f_torch = torch.tensor(f, dtype=torch.complex128, device="cuda").contiguous()
+        
+        X_i = LazyTensor(X_torch[None, :, :].contiguous())
+        K_j = LazyTensor(I_torch[:, None, :].contiguous())
+
+        phase = (K_j * X_i).sum(-1)
+        kernel = (-2*torch.pi*phase).cos() - 1j*(-2*torch.pi*phase).sin()
+
+        f_i = LazyTensor(f_torch[None, :, None].contiguous())
+
+        try:
+            result = (kernel * f_i).sum(dim=1)
+            torch.cuda.synchronize()
+            result = result.squeeze().cpu().numpy()
+           
+            return result
+        except Exception as e:
+            print("Error in KeOps adjoint:", e)
+            return None
+            
+
+    Ncoeffs = np.prod(bandwidths - 1)
+    
+    return DeferredLinearOperator(
+        dtype=np.complex128, shape=(M, Ncoeffs), mfunc=trafo, rmfunc=adjoint
     )
 
 
