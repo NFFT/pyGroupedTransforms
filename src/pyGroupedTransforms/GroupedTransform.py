@@ -1,6 +1,12 @@
 import numpy as np
+import torch
 
 from pyGroupedTransforms import *
+from .NFFTtools import index_set_without_zeros
+
+import pykeops
+from pykeops.torch import LazyTensor
+
 
 # All code that is linked to NFMTtools or to system = "mixed" is not tested yet....
 
@@ -266,24 +272,87 @@ class GroupedTransform:
                         bandwidths=s.bandwidths, X=np.copy(X[:, u], order="C")
                     )
         elif algorithm == "keops":
-                self.matrix = np.empty((0,0), dtype=object)
+            self.matrix = np.empty((0,0), dtype=object)
+            
+            self.transforms = [
+                DeferredLinearOperator()
+                for _ in range(len(self.settings))
+            ]
+            
+            D = X.shape[1]
 
-                self.transforms = [
-                    DeferredLinearOperator()
-                    for _ in range(len(self.settings))
-                ]
+            freq_list = []
 
-                for idx, s in enumerate(self.settings):
+            for s in self.settings:
 
-                    if len(s.bandwidths) == 0:
-                        u = (0,)
-                    else:
-                        u = s.u
+                if len(s.bandwidths) == 0:
+                    full = np.zeros((1, D), dtype=np.int32)
+                    
+                    
+                else: 
+                    local = index_set_without_zeros(
+                        np.array(s.bandwidths, dtype=np.int32)
+                    ).T
 
-                    self.transforms[idx] = s.mode.get_transform_keops(
-                        bandwidths=s.bandwidths,
-                        X=np.copy(X[:,u], order="C")
-                    )
+                    full = np.zeros((local.shape[0], D), dtype=np.int32)
+
+                    for i, dim in enumerate(s.u):
+                        full[:, dim] = local[:, i]
+
+                freq_list.append(full)
+
+            freq = np.vstack(freq_list)
+            
+            X_torch = torch.tensor(X, dtype=torch.float64, device="cuda")
+            I_torch = torch.tensor(
+                freq,
+                dtype=torch.float64,
+                device="cuda"
+            )
+            
+            def trafo(fhat): 
+                X_i = LazyTensor(X_torch[:, None, :].contiguous())
+                K_j = LazyTensor(I_torch[None, :, :].contiguous())
+                phase_fwd = (X_i * K_j).sum(-1)
+                two_pi_phase = -2 * torch.pi * phase_fwd
+                kernel_fwd = two_pi_phase.cos() + 1j * two_pi_phase.sin()
+                fhat_torch = torch.tensor(fhat, dtype=torch.complex128, device="cuda")
+                fhat_j = LazyTensor(fhat_torch[None, :, None].contiguous())
+
+                try:
+                    result = (kernel_fwd * fhat_j).sum(dim=1)
+                    torch.cuda.synchronize()
+                    result = result.squeeze().cpu().numpy()
+                    return result
+                except Exception as e:
+                    print("Error in KeOps trafo:", e)
+                    return None
+                
+            def adjoint(f):
+                f_torch = torch.tensor(f, dtype=torch.complex128, device="cuda").contiguous()
+                
+                X_i = LazyTensor(X_torch[None, :, :].contiguous())
+                K_j = LazyTensor(I_torch[:, None, :].contiguous())
+
+                phase = (K_j * X_i).sum(-1)
+                kernel = (-2*torch.pi*phase).cos() - 1j*(-2*torch.pi*phase).sin()
+
+                f_i = LazyTensor(f_torch[None, :, None].contiguous())
+
+                try:
+                    result = (kernel * f_i).sum(dim=1)
+                    torch.cuda.synchronize()
+                    result = result.squeeze().cpu().numpy()
+                
+                    return result
+                except Exception as e:
+                    print("Error in KeOps adjoint:", e)
+                    return None
+
+            self.transforms = [DeferredLinearOperator(
+                dtype=np.complex128, shape=(X.shape[0], len(freq)), mfunc=trafo, rmfunc=adjoint
+            )]
+    
         else:
             self.transforms = []
             s1 = self.settings[0]
@@ -363,14 +432,10 @@ class GroupedTransform:
                         adjoint_worker(i)
 
                 return fhat
+            
             elif self.algorithm == "keops":
-                fhat = GroupedCoefficients(self.settings)       
-                
-                for i in range(len(self.transforms)):
-                    adjoint_result = self.transforms[i].H @ other
-                    fhat[self.settings[i].u] = adjoint_result
-
-                return fhat
+                return GroupedCoefficients(self.settings, self.transforms[0].H @ other)  
+             
             elif self.algorithm == "direct":
                 return GroupedCoefficients(
                     self.settings, (self.matrix.conj()).T @ other
@@ -403,15 +468,10 @@ class GroupedTransform:
                         worker(i)
 
                 return sum(results)
+            
             elif self.algorithm == "keops":
-                results = []
-        
-                for i in range(len(self.transforms)):
-                    u = self.settings[i].u
-                    result = self.transforms[i] @ other[u]
-                    results.append(result)
-
-                return sum(results)
+                return self.transforms[0] @ other.data
+            
             elif self.algorithm == "direct":
                 return self.matrix @ other.data
         else:
