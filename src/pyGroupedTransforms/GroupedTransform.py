@@ -1,12 +1,11 @@
 import numpy as np
-import torch
-
-from pyGroupedTransforms import *
-from .NFFTtools import index_set_without_zeros
-
 import pykeops
+import torch
 from pykeops.torch import LazyTensor
 
+from pyGroupedTransforms import *
+
+from .NFFTtools import index_set_without_zeros
 
 # All code that is linked to NFMTtools or to system = "mixed" is not tested yet....
 
@@ -272,20 +271,19 @@ class GroupedTransform:
                         bandwidths=s.bandwidths, X=np.copy(X[:, u], order="C")
                     )
         elif algorithm == "keops":
-            self.matrix = np.empty((0,0), dtype=object)
-            
+            self.matrix = np.empty((0, 0), dtype=object)
+
             if torch.cuda.is_available():
                 device = "cuda"
             elif torch.mps.is_available():
                 device = "mps"
             else:
                 device = "cpu"
-            
+
             self.transforms = [
-                DeferredLinearOperator()
-                for _ in range(len(self.settings))
+                DeferredLinearOperator() for _ in range(len(self.settings))
             ]
-            
+
             D = X.shape[1]
 
             freq_list = []
@@ -294,8 +292,7 @@ class GroupedTransform:
 
                 if len(s.bandwidths) == 0:
                     full = np.zeros((1, D), dtype=np.int32)
-                    
-                
+
                 local = np.atleast_2d(
                     s.mode.index_set_without_zeros(
                         np.array(s.bandwidths, dtype=np.int32)
@@ -310,13 +307,9 @@ class GroupedTransform:
                 freq_list.append(full)
 
             freq = np.vstack(freq_list)
-            
+
             X_torch = torch.tensor(X, dtype=torch.float64, device=device)
-            I_torch = torch.tensor(
-                freq,
-                dtype=torch.float64,
-                device=device
-            )
+            I_torch = torch.tensor(freq, dtype=torch.float64, device=device)
 
             def trafo(fhat):
                 if self.system == "cos" or self.system == "cheb":
@@ -325,8 +318,8 @@ class GroupedTransform:
 
                     kernel = 1.0
                     for i in range(D):
-                        Xi = LazyTensor(X_torch[:, None, i:i+1].contiguous())
-                        Ki = LazyTensor(I_torch[None, :, i:i+1].contiguous())
+                        Xi = LazyTensor(X_torch[:, None, i : i + 1].contiguous())
+                        Ki = LazyTensor(I_torch[None, :, i : i + 1].contiguous())
                         kernel = kernel * (2 * torch.pi * Xi * Ki).cos()
 
                     fhat_torch = (
@@ -350,7 +343,9 @@ class GroupedTransform:
                     two_pi_phase = -2 * torch.pi * phase_fwd
                     kernel = two_pi_phase.cos() + 1j * two_pi_phase.sin()
 
-                    fhat_torch = torch.tensor(fhat, dtype=torch.complex128, device=device)
+                    fhat_torch = torch.tensor(
+                        fhat, dtype=torch.complex128, device=device
+                    )
                     fhat_j = LazyTensor(fhat_torch[None, :, None].contiguous())
 
                     try:
@@ -365,15 +360,15 @@ class GroupedTransform:
             def adjoint(f):
                 if self.system == "cos" or self.system == "cheb":
                     mult = np.sqrt(2.0) ** np.count_nonzero(freq, axis=1)
-                    
+
                     f_torch = torch.as_tensor(
                         f, dtype=torch.float64, device=device
                     ).contiguous()
 
                     kernel = 1.0
                     for i in range(D):
-                        Ki = LazyTensor(I_torch[:, None, i:i+1].contiguous())
-                        Xi = LazyTensor(X_torch[None, :, i:i+1].contiguous())
+                        Ki = LazyTensor(I_torch[:, None, i : i + 1].contiguous())
+                        Xi = LazyTensor(X_torch[None, :, i : i + 1].contiguous())
                         kernel = kernel * (2 * torch.pi * Xi * Ki).cos()
 
                     f_i = LazyTensor(f_torch[None, :, None].contiguous())
@@ -387,7 +382,9 @@ class GroupedTransform:
                         print("Error in KeOps adjoint:", e)
                         return None
                 else:
-                    f_torch = torch.tensor(f, dtype=torch.complex128, device=device).contiguous()
+                    f_torch = torch.tensor(
+                        f, dtype=torch.complex128, device=device
+                    ).contiguous()
 
                     X_i = LazyTensor(X_torch[None, :, :].contiguous())
                     K_j = LazyTensor(I_torch[:, None, :].contiguous())
@@ -409,10 +406,15 @@ class GroupedTransform:
                         return None
 
             keops_dtype = np.float64 if self.system == "cos" else np.complex128
-            self.transforms = [DeferredLinearOperator(
-                dtype=keops_dtype, shape=(X.shape[0], len(freq)), mfunc=trafo, rmfunc=adjoint
-            )]
-    
+            self.transforms = [
+                DeferredLinearOperator(
+                    dtype=keops_dtype,
+                    shape=(X.shape[0], len(freq)),
+                    mfunc=trafo,
+                    rmfunc=adjoint,
+                )
+            ]
+
         else:
             self.transforms = []
             s1 = self.settings[0]
@@ -492,15 +494,15 @@ class GroupedTransform:
                         adjoint_worker(i)
 
                 return fhat
-            
+
             elif self.algorithm == "keops":
-                return GroupedCoefficients(self.settings, self.transforms[0].H @ other)  
-             
+                return GroupedCoefficients(self.settings, self.transforms[0].H @ other)
+
             elif self.algorithm == "direct":
                 return GroupedCoefficients(
                     self.settings, (self.matrix.conj()).T @ other
                 )
-                
+
         elif isinstance(other, GC):  # `f = F*fhat`    (fhat = other)
             if self.settings != other.settings:
                 raise ValueError(
@@ -528,10 +530,10 @@ class GroupedTransform:
                         worker(i)
 
                 return sum(results)
-            
+
             elif self.algorithm == "keops":
                 return self.transforms[0] @ other.data
-            
+
             elif self.algorithm == "direct":
                 return self.matrix @ other.data
         else:
