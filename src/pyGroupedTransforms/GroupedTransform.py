@@ -274,6 +274,13 @@ class GroupedTransform:
         elif algorithm == "keops":
             self.matrix = np.empty((0,0), dtype=object)
             
+            if torch.cuda.is_available():
+                device = "cuda"
+            elif torch.mps.is_available():
+                device = "mps"
+            else:
+                device = "cpu"
+            
             self.transforms = [
                 DeferredLinearOperator()
                 for _ in range(len(self.settings))
@@ -288,44 +295,33 @@ class GroupedTransform:
                 if len(s.bandwidths) == 0:
                     full = np.zeros((1, D), dtype=np.int32)
                     
-                elif self.system == "cos":
-                    
-                    local = np.atleast_2d(
-                        s.mode.index_set_without_zeros(
-                            np.array(s.bandwidths, dtype=np.int32)
-                        )
-                    ).T
-
-                    full = np.zeros((local.shape[0], D), dtype=np.int32)
-
-                    for i, dim in enumerate(s.u):
-                        full[:, dim] = local[:, i]
-                        
-                else:
-                    local = index_set_without_zeros(
+                
+                local = np.atleast_2d(
+                    s.mode.index_set_without_zeros(
                         np.array(s.bandwidths, dtype=np.int32)
-                    ).T
+                    )
+                ).T
 
-                    full = np.zeros((local.shape[0], D), dtype=np.int32)
+                full = np.zeros((local.shape[0], D), dtype=np.int32)
 
-                    for i, dim in enumerate(s.u):
-                        full[:, dim] = local[:, i]
+                for i, dim in enumerate(s.u):
+                    full[:, dim] = local[:, i]
 
                 freq_list.append(full)
 
             freq = np.vstack(freq_list)
             
-            X_torch = torch.tensor(X, dtype=torch.float64, device="cuda")
+            X_torch = torch.tensor(X, dtype=torch.float64, device=device)
             I_torch = torch.tensor(
                 freq,
                 dtype=torch.float64,
-                device="cuda"
+                device=device
             )
 
             def trafo(fhat):
                 if self.system == "cos" or self.system == "cheb":
                     mult = np.sqrt(2.0) ** np.count_nonzero(freq, axis=1)
-                    mult_torch = torch.tensor(mult, dtype=torch.float64, device="cuda")
+                    mult_torch = torch.tensor(mult, dtype=torch.float64, device=device)
 
                     kernel = 1.0
                     for i in range(D):
@@ -334,7 +330,7 @@ class GroupedTransform:
                         kernel = kernel * (2 * torch.pi * Xi * Ki).cos()
 
                     fhat_torch = (
-                        torch.as_tensor(fhat, dtype=torch.float64, device="cuda")
+                        torch.as_tensor(fhat, dtype=torch.float64, device=device)
                         * mult_torch
                     )
                     fhat_j = LazyTensor(fhat_torch[None, :, None].contiguous())
@@ -354,7 +350,7 @@ class GroupedTransform:
                     two_pi_phase = -2 * torch.pi * phase_fwd
                     kernel = two_pi_phase.cos() + 1j * two_pi_phase.sin()
 
-                    fhat_torch = torch.tensor(fhat, dtype=torch.complex128, device="cuda")
+                    fhat_torch = torch.tensor(fhat, dtype=torch.complex128, device=device)
                     fhat_j = LazyTensor(fhat_torch[None, :, None].contiguous())
 
                     try:
@@ -369,11 +365,9 @@ class GroupedTransform:
             def adjoint(f):
                 if self.system == "cos" or self.system == "cheb":
                     mult = np.sqrt(2.0) ** np.count_nonzero(freq, axis=1)
-                    mult_torch = torch.tensor(mult, dtype=torch.float64, device="cuda")
                     
-                    f_torch = (
-                        torch.as_tensor(f, dtype=torch.float64, device="cuda")
-                        * mult_torch
+                    f_torch = torch.as_tensor(
+                        f, dtype=torch.float64, device=device
                     ).contiguous()
 
                     kernel = 1.0
@@ -388,12 +382,12 @@ class GroupedTransform:
                         result = (kernel * f_i).sum(dim=1)
                         torch.cuda.synchronize()
                         result = result.squeeze().cpu().numpy()
-                        return result
+                        return result * mult
                     except Exception as e:
                         print("Error in KeOps adjoint:", e)
                         return None
                 else:
-                    f_torch = torch.tensor(f, dtype=torch.complex128, device="cuda").contiguous()
+                    f_torch = torch.tensor(f, dtype=torch.complex128, device=device).contiguous()
 
                     X_i = LazyTensor(X_torch[None, :, :].contiguous())
                     K_j = LazyTensor(I_torch[:, None, :].contiguous())
