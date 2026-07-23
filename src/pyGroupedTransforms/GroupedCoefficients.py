@@ -1,22 +1,54 @@
+"""Coefficients belonging to the indices of a grouped index set.
+
+:py:class:`GC` is the shared base class; use the :py:func:`GroupedCoefficients`
+factory rather than instantiating :py:class:`GroupedCoefficientsComplex` or
+:py:class:`GroupedCoefficientsReal` directly, since it picks the right one from
+the mode of the given settings.
+
+A :py:class:`Setting` describes one ANOVA term — its dimensions, transform mode
+and bandwidths — and a list of them uniquely fixes the layout of the
+coefficient vector.
+"""
+
 import numpy as np
 import scipy
 
 from pyGroupedTransforms import CWWTtools, NFCTtools, NFFTtools, NFMTtools
 
 
-class GC:  # Superclass of GroupedCoefficientsComplex and GroupedCoefficientsReal.
+class GC:
+    r"""Base class for grouped coefficient vectors.
+
+    Superclass of :py:class:`GroupedCoefficientsComplex` and
+    :py:class:`GroupedCoefficientsReal`. Holds the coefficients of every ANOVA
+    term in one flat vector, together with the settings that describe how that
+    vector is partitioned.
+
+    Attributes:
+        settings (list[Setting]): One entry per ANOVA term, uniquely
+            describing the layout such as the bandwidths.
+        data (numpy.ndarray): The flat vector of coefficients, real or complex
+            depending on the subclass.
+    """
 
     def __getitem__(self, idx):
-        """
-        (fhat::GroupedCoefficients[u::Vector{Int}])
+        r"""Return coefficients by ANOVA term or by position.
 
-        If idx is a tuple that contains integer,
-        this function overloads getitem of GC such that you can do `fhat[(1,3)]` to obtain the basis coefficients of the corresponding ANOVA term defined by `u`.
+        - a tuple selects a whole ANOVA term: ``fhat[(1, 3)]`` returns the
+          basis coefficients of the term defined by ``u``
+        - an integer selects a single coefficient: ``fhat[1]``
 
-        (fhat::GroupedCoefficients[idx::Int])
+        Args:
+            idx (tuple[int] or int): The ANOVA term, or the position in the
+                flat coefficient vector.
 
-        If idx is an integer,
-        this function overloads getitem of GC such that you can do `fhat[1]` to obtain the basis coefficient determined by `idx`.
+        Returns:
+            numpy.ndarray or numbers.Number: The coefficients of the term, or
+            the single coefficient.
+
+        Raises:
+            ValueError: If the requested term is not part of the settings.
+            TypeError: If ``idx`` is neither an int nor a tuple of ints.
         """
         if type(idx) == int:
             return self.data[idx]
@@ -37,16 +69,21 @@ class GC:  # Superclass of GroupedCoefficientsComplex and GroupedCoefficientsRea
             )
 
     def __setitem__(self, idx, Number):
-        """
-        (fhat::GroupedCoefficients[u::Vector{Int}] = fhatu::Union{Vector{ComplexF64},Vector{Float64}})
+        r"""Set coefficients by ANOVA term or by position.
 
-        If idx is a tuple that contains integer,
-        this function overloads setitem of GC such that you can do `fhat[(1,3)] = [1 2 3]` to set the basis coefficients of the corresponding ANOVA term defined by `u`.
+        - a tuple sets a whole ANOVA term: ``fhat[(1, 3)] = np.array([1, 2, 3])``
+        - an integer sets a single coefficient: ``fhat[1] = 3``
 
-        (fhat::GroupedCoefficients[idx::Int] = z::Number)
+        Args:
+            idx (tuple[int] or int): The ANOVA term, or the position in the
+                flat coefficient vector.
+            Number (numpy.ndarray or numbers.Number): The value(s) to store.
+                Must match the real/complex type of the object.
 
-        If idx is an integer,
-        this function overloads setitem of GC such that you can do `fhat[1] = 3` to set the basis coefficient determined by `idx`.
+        Raises:
+            ValueError: If the requested term is not part of the settings.
+            TypeError: If ``idx`` has the wrong type, or if a real object is
+                given complex data or vice versa.
         """
         if type(idx) == int:
             self.data[idx] = Number
@@ -77,18 +114,21 @@ class GC:  # Superclass of GroupedCoefficientsComplex and GroupedCoefficientsRea
             raise TypeError("Index must be an int or a tuple that contains integer")
 
     def vec(self):
-        """
-        (vec( fhat::GroupedCoefficients )::Vector{<:Number})
+        r"""Return the flat vector of basis coefficients.
 
-        This function returns the vector of the basis coefficients of self.
+        Returns:
+            numpy.ndarray: The underlying coefficient vector.
         """
         return self.data
 
     def __rmul__(self, alpha):
-        """
-        (*( z::Number, fhat::GroupedCoefficients )::GroupedCoefficients)
+        r"""Multiply the coefficients by a scalar.
 
-        This function defines the multiplication of a number with a GC object.
+        Args:
+            alpha (numbers.Number): The scalar factor.
+
+        Returns:
+            GC: A new object holding the scaled coefficients.
         """
         if isinstance(alpha, (int, float, complex)):
             return GroupedCoefficients(self.settings, alpha * self.data)
@@ -101,10 +141,16 @@ class GC:  # Superclass of GroupedCoefficientsComplex and GroupedCoefficientsRea
         return NotImplemented
 
     def __add__(self, other):
-        """
-        (+( z::Number, fhat::GroupedCoefficients )::GroupedCoefficients)
+        r"""Add two grouped coefficient objects.
 
-        This function defines the addition of two GC objects.
+        Args:
+            other (GC): The object to add. Must carry the same settings.
+
+        Returns:
+            GC: A new object holding the summed coefficients.
+
+        Raises:
+            ValueError: If the two objects have different settings.
         """
         if not isinstance(other, GC):
             return NotImplemented
@@ -115,20 +161,28 @@ class GC:  # Superclass of GroupedCoefficientsComplex and GroupedCoefficientsRea
             raise ValueError("Settings mismatch.")
 
     def __sub__(self, other):
-        """
-        (-( z::Number, fhat::GroupedCoefficients )::GroupedCoefficients)
+        r"""Subtract two grouped coefficient objects.
 
-        This function defines the subtraction of two GC objects.
+        Args:
+            other (GC): The object to subtract. Must carry the same settings.
+
+        Returns:
+            GC: A new object holding the difference.
+
+        Raises:
+            ValueError: If the two objects have different settings.
         """
         return self + (-1 * other)
 
     def set_data(self, data):
-        """
-        (set_data!(
-        fhat::GroupedCoefficients,
-        data::Union{Vector{ComplexF64},Vector{Float64}},))
+        r"""Overwrite the coefficient vector in place.
 
-        With this function one can set the data of a GC object.
+        Args:
+            data (numpy.ndarray): The new coefficients. Must match the
+                real/complex type of the object.
+
+        Raises:
+            TypeError: If a real object is given complex data, or vice versa.
         """
         if (
             isinstance(self, GroupedCoefficientsComplex)
@@ -142,16 +196,25 @@ class GC:  # Superclass of GroupedCoefficientsComplex and GroupedCoefficientsRea
             return None
 
     def norms(self, Dict=False, other=None, m=None):
-        """
-        If other == None:
-        (norms(fhat::GroupedCoefficients; dict =false))
+        r"""Compute the norm of each ANOVA term's coefficient block.
 
-        If other != None and m == None:
-        (norms(fhat::GroupedCoefficients, what::GroupedCoefficients)::Vector{Float64})
+        These norms are what the variance and sensitivity analyses are built
+        on. For the Chui-Wang wavelet bases the basis functions are not
+        orthonormal, so passing the wavelet order ``m`` switches to a weighted
+        norm using the Gram matrix from :py:func:`variances`.
 
-        If other == None and m != None:
-        (function norms(fhat::GroupedCoefficients, m::Int ; dict =false)::Union{Vector{Float64},Dict{Vector{Int},Float64}})
-        Inputs sind vertauscht leider...
+        Args:
+            Dict (bool, optional): Defaults to ``False``. If ``True``, return a dictionary indexed by ANOVA
+                term, skipping the empty term. Otherwise return a list in
+                settings order.
+            other (GC, optional): Compare against a second coefficient object
+                instead of taking plain norms.
+            m (int, optional): Wavelet order. Required to get correct norms for
+                the ``"chui*"`` bases; ignored for the orthonormal bases.
+
+        Returns:
+            list or dict: One norm per ANOVA term, keyed by term if ``Dict``
+            is set.
         """
 
         if other == None:
@@ -246,18 +309,30 @@ class GC:  # Superclass of GroupedCoefficientsComplex and GroupedCoefficientsRea
 
 # Matrix of variances between two basis functions, needed for wavelet basis, since they are not orthonormal
 def variances(j, m):
-    """
-    (variances(j::Int,m::Int)::Vector{Float64})
+    r"""Return the scalar products between wavelets of one level.
 
+    The Chui-Wang wavelets are not orthonormal, so computing norms of wavelet
+    coefficients needs the Gram matrix of the basis. This returns the first row
+    of that matrix for level ``j``, from which the full (circulant) matrix is
+    reconstructed by :py:meth:`GC.norms`.
 
-    INPUT
-    j 		... level of wavelet
-    m 		...	order of wavelet
-    OUTPUT
-    y = (<psi_{j,0},psi_{j,k}>)for k = 0...2^j-1
-                                                            (psi_{j,k}) are the wavelets, output contains a vector of all scalar products of one level
-                                                            for 2^j >2m*1 the same values, but more zeros for higher j.
+    Formally the result is
 
+    .. math::
+
+        y = \left( \langle \psi_{j,0}, \psi_{j,k} \rangle
+        \right)_{k=0,\dots,2^j-1},
+
+    where :math:`\psi_{j,k}` are the wavelets of level :math:`j`. For
+    :math:`2^j > 2m` the nonzero values repeat and only the number of trailing
+    zeros grows with :math:`j`.
+
+    Args:
+        j (int): Level of the wavelet.
+        m (int): Order of the wavelet, 2 to 4.
+
+    Returns:
+        numpy.ndarray: The :math:`2^j` scalar products of level ``j``.
     """
     if m == 2:
         if j == 0:
@@ -350,6 +425,30 @@ def variances(j, m):
 
 
 class Setting:
+    r"""Describes one ANOVA term within a grouped index set.
+
+    A list of these uniquely fixes the layout of a grouped coefficient vector
+    and of a :py:class:`GroupedTransform`. Two settings compare equal when
+    their mode, dimensions, bandwidths and bases all agree.
+
+    Args:
+        u (tuple[int]): The coordinate subset this term covers. The empty
+            tuple denotes the constant term.
+        mode (module): The transform module handling this term — one of
+            :py:mod:`NFFTtools`, :py:mod:`NFCTtools`, :py:mod:`NFMTtools` or
+            :py:mod:`CWWTtools`. Defaults to :py:mod:`NFFTtools`.
+        bandwidths (numpy.ndarray): Bandwidths for this term, dtype
+            ``int32``, one entry per dimension in ``u``.
+        bases (list[str], optional): Per-dimension basis, used by the
+            ``"mixed"`` system.
+
+    Attributes:
+        u (tuple[int]): The coordinate subset.
+        mode (module): The transform module.
+        bandwidths (numpy.ndarray): The bandwidths.
+        bases (list[str]): The per-dimension bases.
+    """
+
     def __init__(self, u=None, mode=NFFTtools, bandwidths=None, bases=None):
         self.u = u
         self.mode = mode
@@ -385,20 +484,23 @@ class Setting:
             return NotImplemented
 
 
-# A class to hold complex coefficients belonging to indices in a grouped index set
-
-### Fields:
-# * `setting::Vector{NamedTuple{(:u, :mode, :bandwidths, :bases),Tuple{Vector{Int},Module,Vector{Int},Vector{String}}}}` - uniquely describes the setting such as the bandlimits ``N_{\pmb u}``, see also [`get_setting(system::String,d::Int,ds::Int,N::Vector{Int},basis_vect::Vector{String})::Vector{NamedTuple{(:u, :mode, :bandwidths, :bases),Tuple{Vector{Int},Module,Vector{Int},Vector{String}}}}`](@ref) and #[`get_setting(system::String,U::Vector{Vector{Int}},N::Vector{Int},basis_vect::Vector{String})::Vector{NamedTuple{(:u, :mode, :bandwidths, :bases),Tuple{Vector{Int},Module,Vector{Int},Vector{String}}}}`](@ref)
-# * `data::Union{Vector{ComplexF64},Nothing}` - the vector of coefficients
-
-## Constructor
-#    GroupedCoefficientsComplex( setting, data = nothing )
-
-## Additional Constructor
-#    GroupedCoefficients( setting, data = nothing )
-
-
 class GroupedCoefficientsComplex(GC):
+    r"""Complex coefficients belonging to a grouped index set.
+
+    Created by the :py:func:`GroupedCoefficients` factory for settings whose
+    mode is :py:mod:`NFFTtools`.
+
+    Args:
+        settings (list[Setting]): One entry per ANOVA term, fixing the layout
+            of the coefficient vector.
+        data (numpy.ndarray, optional): The coefficients. If omitted, a zero
+            vector of the required length is allocated.
+
+    Raises:
+        ValueError: If ``data`` has the wrong length for ``settings``.
+        RuntimeError: If a setting's mode does not provide ``datalength``.
+    """
+
     def __init__(self, settings, data=None):
 
         try:
@@ -417,20 +519,23 @@ class GroupedCoefficientsComplex(GC):
         self.data = data
 
 
-# A class to hold real coefficients belonging to indices in a grouped index set
-
-### Fields
-# * `setting::Vector{NamedTuple{(:u, :mode, :bandwidths, :bases),Tuple{Vector{Int},Module,Vector{Int},Vector{String}}}}` - uniquely describes the setting such as the bandlimits ``N_{\pmb u}``, see also [`get_setting(system::String,d::Int,ds::Int,N::Vector{Int},basis_vect::Vector{String})::Vector{NamedTuple{(:u, :mode, :bandwidths, :bases),Tuple{Vector{Int},Module,Vector{Int},Vector{String}}}}`](@ref) and [`get_setting(system::String,U::Vector{Vector{Int}},N::Vector{Int},basis_vect::Vector{String})::Vector{NamedTuple{(:u, :mode, :bandwidths, :bases),Tuple{Vector{Int},Module,Vector{Int},Vector{String}}}}`](@ref)
-# * `data::Union{Vector{ComplexF64},Nothing}` - the vector of coefficients
-
-## Constructor
-#    GroupedCoefficientsComplex( setting, data = nothing )
-
-## Additional Constructor
-#    GroupedCoefficients( setting, data = nothing )
-
-
 class GroupedCoefficientsReal(GC):
+    r"""Real coefficients belonging to a grouped index set.
+
+    Created by the :py:func:`GroupedCoefficients` factory for settings whose
+    mode is :py:mod:`NFCTtools` or :py:mod:`CWWTtools`.
+
+    Args:
+        settings (list[Setting]): One entry per ANOVA term, fixing the layout
+            of the coefficient vector.
+        data (numpy.ndarray, optional): The coefficients. If omitted, a zero
+            vector of the required length is allocated.
+
+    Raises:
+        ValueError: If ``data`` has the wrong length for ``settings``.
+        RuntimeError: If a setting's mode does not provide ``datalength``.
+    """
+
     def __init__(self, settings, data=None):
 
         try:
@@ -450,6 +555,21 @@ class GroupedCoefficientsReal(GC):
 
 
 def GroupedCoefficients(settings, data=None):
+    r"""Create a grouped coefficient object matching the given settings.
+
+    Picks :py:class:`GroupedCoefficientsComplex` or
+    :py:class:`GroupedCoefficientsReal` from the transform mode of the
+    settings. This is the intended way to construct coefficients.
+
+    Args:
+        settings (list[Setting]): One entry per ANOVA term.
+        data (numpy.ndarray, optional): The coefficients. If omitted, a zero
+            vector of the required length is allocated.
+
+    Returns:
+        GC: A complex object for :py:mod:`NFFTtools` settings, a real one for
+        :py:mod:`NFCTtools` and :py:mod:`CWWTtools`.
+    """
     if settings[0].mode == NFFTtools:
         return GroupedCoefficientsComplex(settings, data)
     if settings[0].mode == NFCTtools or settings[0].mode == CWWTtools:

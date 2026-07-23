@@ -1,10 +1,9 @@
 import numpy as np
+import pykeops
+import torch
+from pykeops.torch import LazyTensor
 
 from pyGroupedTransforms import *
-
-import torch
-import pykeops
-from pykeops.torch import LazyTensor
 
 
 def datalength(
@@ -172,6 +171,7 @@ def get_transform(
     return DeferredLinearOperator(
         dtype=np.complex128, shape=(M, N), mfunc=trafo, rmfunc=adjoint
     )
+
 
 def get_matrix(
     bandwidths, X
