@@ -7,8 +7,8 @@ class DeferredLinearOperator(LinearOperator):
         self,
         dtype="complex",
         shape=None,
-        mfunc=lambda x: "not yet initialized",
-        rmfunc=lambda x: "not yet initialized",
+        mfunc=None,
+        rmfunc=None,
     ):
 
         self.sh = False
@@ -19,8 +19,6 @@ class DeferredLinearOperator(LinearOperator):
 
         self._matvec_func = mfunc
         self._rmatvec_func = rmfunc
-        self._matvec = lambda x: self._matvec_func(x)
-        self._rmatvec = lambda x: self._rmatvec_func(x)
         super().__init__(dtype=dtype, shape=shape)
 
     def set(self, dtype=None, shape=None, mfunc=None, rmfunc=None):
@@ -38,16 +36,15 @@ class DeferredLinearOperator(LinearOperator):
             self._rmatvec_func = rmfunc
 
     def _matvec(self, x):
-        if self._matvec_func(0) == "not implemented yet" or self.sh == False:
+        if self._matvec_func is None or self.sh == False:
             raise NotImplementedError("LinearOperator is not yet initialized.")
 
-        print(self.LO @ x)
-        return self @ x
+        return self._matvec_func(x)
 
     def _rmatvec(self, x):
-        if self._matvec_func(0) == "not implemented yet" or self.sh == False:
+        if self._matvec_func is None or self.sh == False:
             raise NotImplementedError("LinearOperator is not yet initialized.")
-        if self._rmatvec_func(0) == "not implemented yet":
+        if self._rmatvec_func is None:
             raise NotImplementedError("rmatvec is not yet implemented")
 
-        return self.H @ x
+        return self._rmatvec_func(x)
