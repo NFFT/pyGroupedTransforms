@@ -103,11 +103,11 @@ def get_setting(
 
         if systems[system] == NFMTtools:
             if len(basis_vect) == 0:
-                ValueError(
+                raise ValueError(
                     "please call get_setting with basis_vect for a NFMT transform."
                 )
             if len(basis_vect) < d:
-                ValueError("basis_vect must have an entry for every dimension.")
+                raise ValueError("basis_vect must have an entry for every dimension.")
             return [
                 Setting(
                     u=U[idx],
@@ -143,11 +143,11 @@ def get_setting(
 
         if systems[system] == NFMTtools:
             if len(basis_vect) == 0:
-                ValueError(
+                raise ValueError(
                     "please call get_setting with basis_vect for a NFMT transform."
                 )
             if len(basis_vect) < max(max(u) for u in U):
-                ValueError("basis_vect must have an entry for every dimension.")
+                raise ValueError("basis_vect must have an entry for every dimension.")
             return [
                 Setting(
                     u=u,
@@ -182,11 +182,11 @@ def get_setting(
 
         if systems[system] == NFMTtools:
             if len(basis_vect) == 0:
-                ValueError(
+                raise ValueError(
                     "please call get_setting with basis_vect for a NFMT transform."
                 )
             if len(basis_vect) < max(max(u) for u in U):
-                ValueError("basis_vect must have an entry for every dimension.")
+                raise ValueError("basis_vect must have an entry for every dimension.")
             return [
                 Setting(
                     u=U[idx],
@@ -277,11 +277,11 @@ class GroupedTransform:
 
         if system == "mixed":
             if len(basis_vect) == 0:
-                ValueError(
+                raise ValueError(
                     "please call GroupedTransform with basis_vect for a NFMT transform."
                 )
             if len(basis_vect) != X.shape[1]:
-                ValueError("basis_vect must have an entry for every dimension.")
+                raise ValueError("basis_vect must have an entry for every dimension.")
 
         if system in {"exp", "chui1", "chui2", "chui3", "chui4"}:
             if np.min(X) < -0.5 or np.max(X) >= 0.5:
@@ -693,7 +693,9 @@ class GroupedTransform:
                 u1 = (0,)
             else:
                 u1 = s1.u
-            F_direct = s1.mode.get_matrix(s.bdanwidths, self.X[:, u1].T, bases=s.bases)
+            F_direct = s1.mode.get_matrix(
+                s1.bandwidths, self.X[:, u1].T, bases=s1.bases
+            )
             for idx, s in enumerate(self.settings):
                 if idx == 0:
                     continue
