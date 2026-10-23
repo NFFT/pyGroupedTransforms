@@ -16,8 +16,8 @@ readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
   "pyNFFT3>=0.2.2",
-  "numpy>=2.0.0",
-  "scipy>=1.16.0",
+  "numpy>=1.26.4",
+  "scipy>=1.11.4",
 ]
 
 [project.urls]

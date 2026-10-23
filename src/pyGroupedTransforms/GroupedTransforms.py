@@ -47,7 +47,7 @@ def get_IndexSet(settings, d):
         elif s.mode == NFMTtools:
             index_set_u = s.mode.nfmt_index_set_without_zeros(s.bandwidths, s.bases)
         else:
-            ValueError(f"Unknown mode: {s.mode}")
+            raise ValueError(f"Unknown mode: {s.mode}")
 
         if len(s.u) == 1:
             index_set[s.u[0], idx : idx + nf_u] = index_set_u
