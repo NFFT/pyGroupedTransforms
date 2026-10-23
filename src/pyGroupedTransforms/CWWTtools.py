@@ -119,7 +119,7 @@ def indextoN(j, k):  # indextoN(j::Array{Int}, k::Array{Int})::Array{Int}
     s = k.shape[1]
 
     if d != d2:
-        ValueError("j and k have to have same length, k has to be column vector.")
+        raise ValueError("j and k have to have same length, k has to be column vector.")
 
     out = np.zeros(s)
 

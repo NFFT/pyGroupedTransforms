@@ -15,7 +15,8 @@ from scipy.sparse import coo_matrix
 # import modules
 from .cardinal_bspline import *
 from .DeferredLinearOperator import *
-from .GroupedCoefficients import *  # NFFTtools, NFCTtools, NFMTtools and CWWTtools are imported with GroupedCoefficients
+from .GroupedCoefficients import \
+    *  # NFFTtools, NFCTtools, NFMTtools and CWWTtools are imported with GroupedCoefficients
 from .GroupedTransform import *
 from .GroupedTransforms import *
 
